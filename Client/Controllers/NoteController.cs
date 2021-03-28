@@ -5,6 +5,7 @@ using System.Linq;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Cors;
 
 using Orleans;
 
@@ -28,11 +29,12 @@ namespace TodoListApi.Client.Controllers {
         /// Get all todo note items
         /// </summary>
         [HttpGet]
+        [EnableCors("AnyOrigin")]
         public IEnumerable<NoteState> Get() {
             // TODO: This is not fine. We need to implement method to return arbitrary grains (or at least select N of returned or range)
             return Enumerable.Range(0, 200).Select(index =>
                 new NoteState {
-                    id = index,
+                    note_id = index,
                     noteText = _clusterClient.GetGrain<INoteGrain>(index).getNote().Result,
                     noteDate = _clusterClient.GetGrain<INoteGrain>(index).getDate().Result,
                     finished = _clusterClient.GetGrain<INoteGrain>(index).getFinished().Result
@@ -44,6 +46,7 @@ namespace TodoListApi.Client.Controllers {
         /// Deletes a specific todo note items.
         /// </summary>
         [HttpDelete("{id}")]
+        [EnableCors("AnyOrigin")]
         public IActionResult Delete(int id)
         {
             var tsk = _clusterClient.GetGrain<INoteGrain>(id).removeData();
@@ -73,23 +76,24 @@ namespace TodoListApi.Client.Controllers {
         [HttpPost]
         [ProducesResponseType(StatusCodes.Status201Created)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [EnableCors("AnyOrigin")]
         public ActionResult<NoteState> Create(NoteState item) {
-            var gr = _clusterClient.GetGrain<INoteGrain>(item.id);
-            if(gr.getNote().Result == "") {
-                gr.setData(item.finished, item.noteText, item.noteDate);
-                return CreatedAtRoute("[controller]", new {id = item.id}, item);
+            var gr = _clusterClient.GetGrain<INoteGrain>(item.note_id);
+            if(gr.getNote().Result != "") {
+                return BadRequest();
             }
-
-            return BadRequest();
-
+            gr.setData(item.finished, item.noteText, item.noteDate);
+            return StatusCode(201);
         }
 
-        [HttpPut("{id}")]
-        [ProducesResponseType(StatusCodes.Status200OK)]
+
+        [HttpPost("{id}")]
+        [ProducesResponseType(StatusCodes.Status202Accepted)]
         [ProducesResponseType(StatusCodes.Status304NotModified)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        public IActionResult Update(int id, string noteText) {
-            if(noteText == null || noteText == "") {
+        [EnableCors("AnyOrigin")]
+        public ActionResult<NoteUpdate> UpdateText(int id, NoteUpdate item) {
+            if((item.noteText == null || item.noteText == "") && item.finished == null) {
                 return BadRequest();
             }
 
@@ -97,10 +101,10 @@ namespace TodoListApi.Client.Controllers {
             if(gr.getNote().Result == "") {
                 return StatusCode(304);
             }
+            if(item.noteText != null && item.noteText != "") { gr.setNote(item.noteText); }
+            if(item.finished != null) { gr.setFinished(item.finished ?? gr.getFinished().Result); }
 
-            gr.setNote(noteText);
-
-            return Ok();
+            return Accepted();
         }
     }
 }

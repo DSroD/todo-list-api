@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.HttpsPolicy;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Cors;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -33,10 +34,22 @@ namespace TodoListApi.Client
             var orleansClient = ConnectClient().Result;
             var grain = orleansClient.GetGrain<INoteGrain>(0);
 
+            services.AddCors(options => {
+                options.AddPolicy("AnyOrigin", builder =>
+                {
+                    builder
+                        .AllowAnyOrigin()
+                        .AllowAnyMethod()
+                        .AllowAnyHeader()
+                        .DisallowCredentials();
+                });
+            });
+            
             services.AddControllers();
+            
             services.AddSwaggerGen(c =>
             {
-                c.SwaggerDoc("v1", new OpenApiInfo { Title = "Client", Version = "v1" });
+                c.SwaggerDoc("v1", new OpenApiInfo { Title = "ToDo-List API", Version = "v1" });
             });
             services.AddSingleton<IGrainFactory>(orleansClient);
             services.AddSingleton<IClusterClient>(orleansClient);
@@ -45,11 +58,12 @@ namespace TodoListApi.Client
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
         {
+
             if (env.IsDevelopment())
             {
                 app.UseDeveloperExceptionPage();
                 app.UseSwagger();
-                app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "Client v1"));
+                app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "ToDo-List API v1"));
             }
 
             //app.UseHttpsRedirection();
@@ -57,6 +71,8 @@ namespace TodoListApi.Client
             app.UseRouting();
 
             app.UseAuthorization();
+
+            app.UseCors("AnyOrigin");
 
             app.UseEndpoints(endpoints =>
             {

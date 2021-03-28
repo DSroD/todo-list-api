@@ -5,7 +5,7 @@ using System.ComponentModel.DataAnnotations;
 namespace TodoListApi.Client {
     public class NoteState {
         [Required]
-        public int id { get; set; }
+        public int note_id { get; set; }
         [Required]
         public string noteText { get; set; }
         [Required]
