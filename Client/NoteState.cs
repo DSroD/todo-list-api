@@ -1,9 +1,12 @@
 
+using System;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 
 namespace TodoListApi.Client {
-    public class NoteState {
+
+        [Serializable]
+        public class NoteState {
         [Required]
         public int note_id { get; set; }
         [Required]
