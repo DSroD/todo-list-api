@@ -1,21 +1,26 @@
 using System;
-
 using System.Threading.Tasks;
+using System.Net.WebSockets;
+using System.Threading;
+using System.Collections.Generic;
+
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.HttpsPolicy;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Cors;
+using Microsoft.AspNetCore.WebSockets;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.OpenApi.Models;
+using Microsoft.AspNetCore.Http;
 
 using Orleans;
 using Orleans.Configuration;
 
 using TodoListApi.Interfaces;
+using TodoListApi.Client.Hubs;
 
 namespace TodoListApi.Client
 {
@@ -34,14 +39,27 @@ namespace TodoListApi.Client
             var orleansClient = ConnectClient().Result;
             var grain = orleansClient.GetGrain<INoteGrain>(0);
 
+            var corsSettings = new ConfigurationBuilder()
+                .AddJsonFile("corsSettings.json", false)
+                .Build();
+
             services.AddCors(options => {
-                options.AddPolicy("AnyOrigin", builder =>
+                //options.AddPolicy("AnyOrigin", builder =>
+                //{
+                //    builder
+                //        .WithOrigins(corsSettings.GetSection("webDomain").Get<string[]>())
+                //        .AllowAnyMethod()
+                //        .AllowAnyHeader()
+                //        .DisallowCredentials();
+                //});
+
+                options.AddPolicy("DomainCred", builder =>
                 {
                     builder
-                        .AllowAnyOrigin()
-                        .AllowAnyMethod()
+                        .WithOrigins(corsSettings.GetSection("webDomain").Get<string[]>())
                         .AllowAnyHeader()
-                        .DisallowCredentials();
+                        .WithMethods("GET", "POST", "DELETE")
+                        .AllowCredentials();
                 });
             });
             
@@ -51,6 +69,9 @@ namespace TodoListApi.Client
             {
                 c.SwaggerDoc("v1", new OpenApiInfo { Title = "ToDo-List API", Version = "v1" });
             });
+
+            services.AddSignalR();
+
             services.AddSingleton<IGrainFactory>(orleansClient);
             services.AddSingleton<IClusterClient>(orleansClient);
         }
@@ -70,16 +91,18 @@ namespace TodoListApi.Client
 
             app.UseRouting();
 
-            app.UseAuthorization();
+            app.UseCors("DomainCred");
 
-            app.UseCors("AnyOrigin");
+            app.UseAuthorization();
 
             app.UseEndpoints(endpoints =>
             {
                 endpoints.MapControllers();
+                endpoints.MapHub<UpdateHub>("/update");
             });
         }
 
+        #region Orleans Client
         private static async Task<IClusterClient> ConnectClient()
         {
             IClusterClient client;
@@ -97,5 +120,6 @@ namespace TodoListApi.Client
             Console.WriteLine("Client successfully connected to silo host \n");
             return client;
         }
+        #endregion
     }
 }

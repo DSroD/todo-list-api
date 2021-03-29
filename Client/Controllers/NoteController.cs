@@ -29,7 +29,7 @@ namespace TodoListApi.Client.Controllers {
         /// Get all todo note items
         /// </summary>
         [HttpGet]
-        [EnableCors("AnyOrigin")]
+        //[EnableCors("AnyOrigin")]
         public IEnumerable<NoteState> Get() {
             // TODO: This is not fine. We need to implement method to return arbitrary grains (or at least select N of returned or range)
             return Enumerable.Range(0, 200).Select(index =>
@@ -46,7 +46,7 @@ namespace TodoListApi.Client.Controllers {
         /// Deletes a specific todo note items.
         /// </summary>
         [HttpDelete("{id}")]
-        [EnableCors("AnyOrigin")]
+        //[EnableCors("AnyOrigin")]
         public IActionResult Delete(int id)
         {
             var tsk = _clusterClient.GetGrain<INoteGrain>(id).removeData();
@@ -76,7 +76,7 @@ namespace TodoListApi.Client.Controllers {
         [HttpPost]
         [ProducesResponseType(StatusCodes.Status201Created)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        [EnableCors("AnyOrigin")]
+        //[EnableCors("AnyOrigin")]
         public ActionResult<NoteState> Create(NoteState item) {
             var gr = _clusterClient.GetGrain<INoteGrain>(item.note_id);
             if(gr.getNote().Result != "") {
@@ -91,7 +91,7 @@ namespace TodoListApi.Client.Controllers {
         [ProducesResponseType(StatusCodes.Status202Accepted)]
         [ProducesResponseType(StatusCodes.Status304NotModified)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        [EnableCors("AnyOrigin")]
+        //[EnableCors("AnyOrigin")]
         public ActionResult<NoteUpdate> UpdateText(int id, NoteUpdate item) {
             if((item.noteText == null || item.noteText == "") && item.finished == null) {
                 return BadRequest();
